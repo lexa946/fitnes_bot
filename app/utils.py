@@ -1,6 +1,7 @@
 import datetime
 from collections import Counter
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 from aiogram.types import CallbackQuery, Message
 
@@ -53,7 +54,7 @@ def get_free_hours(appointment_date: str | datetime.date,
     if isinstance(appointment_date, str):
         appointment_date = datetime.date.fromisoformat(appointment_date)
 
-    dt_now = datetime.datetime.now()
+    dt_now = datetime.datetime.now(ZoneInfo("Europe/Moscow"))
     if appointment_date == dt_now.date():
         start_time = dt_now.hour + 2
     else:

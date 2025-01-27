@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     WEEKDAY_TO_STR: dict
 
 
+
     @model_validator(mode="before")
     def set_more_field(cls, values):
         values["DATABASE_URL"] = (f"postgresql+asyncpg://{values['DB_USERNAME']}:{values['DB_PASSWORD']}"

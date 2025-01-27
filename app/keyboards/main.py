@@ -1,5 +1,6 @@
 import datetime
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -93,7 +94,7 @@ def choice_trainer_keyboard(kb: InlineKeyboardBuilder, trainers: list[User]):
 
 @create_inline_keyboard
 def choice_appointment_date_keyboard(kb: InlineKeyboardBuilder, free_days: list[int]):
-    date_now = datetime.datetime.now().date()
+    date_now = datetime.datetime.now(ZoneInfo("Europe/Moscow")).date()
     for i in range(7):
         day = date_now + datetime.timedelta(days=i)
         if day.weekday()+1 in free_days: continue

@@ -17,6 +17,13 @@ from app.config import settings
 
 router = Router()
 
+@router.message(Command("help"))
+async def help(message: Message):
+    await message.answer("Если вы столкнулись с трудностями при работе с ботом, "
+                         "тогда попробуйте вызвать /menu и повторить свои действия. "
+                         "Если трудности повторяются тогда необходимо обратиться к @PozharAlex "
+                         "и описать цикл ваших действий приводимых к ошибкам работы. "
+                         "Это необходимо для дальнейшего устранения и улучшения работы бота.")
 
 async def choice_trainer(callback: CallbackQuery):
     trainers = await UserDAO.find_all(is_trainer=True)

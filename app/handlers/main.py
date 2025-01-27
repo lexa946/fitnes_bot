@@ -17,6 +17,7 @@ from app.config import settings
 
 router = Router()
 
+
 @router.message(Command("help"))
 async def help(message: Message):
     await message.answer("Если вы столкнулись с трудностями при работе с ботом, "
@@ -24,6 +25,7 @@ async def help(message: Message):
                          "Если трудности повторяются тогда необходимо обратиться к @PozharAlex "
                          "и описать цикл ваших действий приводимых к ошибкам работы. "
                          "Это необходимо для дальнейшего устранения и улучшения работы бота.")
+
 
 async def choice_trainer(callback: CallbackQuery):
     trainers = await UserDAO.find_all(is_trainer=True)
@@ -97,7 +99,7 @@ async def settings_handler(callback: CallbackQuery, user: User):
         if not schedule_work:
             schedule_work = await ScheduleWorkDAO.add(trainer_id=user.user_id)
 
-        if schedule_work.hours != [0] :
+        if schedule_work.hours != [0]:
             work_hours_str = schedule_work.hours
         else:
             work_hours_str = "любые"
@@ -191,13 +193,14 @@ async def choice_remove_appointment(callback: CallbackQuery, user: User):
     if not appointments:
         await callback.message.answer("У вас нету активных записей!")
     else:
+        if user.is_trainer:
+            attr_name = "user_id"
+        else:
+            attr_name = "trainer_id"
+        list_for_keyboard = [(appointment, await UserDAO.find_one_or_none(user_id=getattr(appointment, attr_name)),
+                              ) for appointment in appointments]
         await callback.message.edit_text("Выберите запись для удаления:",
-                                         reply_markup=choice_remove_appointments_keyboard(
-                                             [
-                                                 (appointment,
-                                                  await UserDAO.find_one_or_none(user_id=appointment.trainer_id),
-                                                  ) for appointment in appointments]
-                                         ))
+                                         reply_markup=choice_remove_appointments_keyboard(list_for_keyboard))
 
 
 @router.callback_query(F.data.startswith("remove_appointment"))
@@ -209,22 +212,30 @@ async def remove_appointment(callback: CallbackQuery, user: User):
     menu = back_to_main_menu()
 
     if appointment:
-        trainer: User = await UserDAO.find_one_or_none(user_id=appointment.trainer_id)
+        if user.is_trainer:
+            client = await UserDAO.find_one_or_none(user_id=appointment.user_id)
+            trainer: User = user
+            edit_username = client.username
+            notification_chat_id = client.user_id
+            notification_text = f"Тренер {trainer.username} отменил запись - {appointment.start_at_str} "
+        else:
+            client: User = user
+            trainer: User = await UserDAO.find_one_or_none(user_id=appointment.trainer_id)
+            edit_username = trainer.username
+            notification_chat_id = trainer.trainer_id
+            notification_text = f"Клиент {client.username} отменил запись - {appointment.start_at_str}"
 
         if appointment.is_active:
             await AppointmentDAO.patch(appointment, is_active=False)
-            await callback.message.edit_text(f"Запись - {appointment.start_at_str} {trainer.username} - успешно отменена",
-                                             reply_markup=menu)
-            if user.is_trainer:
-                notification_chat_id = appointment.user_id
-                notification_text = f"Тренер {trainer.username} отменил запись - {appointment.start_at_str} "
-            else:
-                notification_chat_id = appointment.trainer_id
-                notification_text = f"Клиент {user.username} отменил запись - {appointment.start_at_str}"
+            await callback.message.edit_text(
+                f"Запись - {appointment.start_at_str} {edit_username} - успешно отменена",
+                reply_markup=menu)
             await callback.bot.send_message(notification_chat_id, notification_text)
+
         else:
-            await callback.message.edit_text(f"Запись - {appointment.start_at_str} {trainer.username} - уже была отменена",
-                                             reply_markup=menu)
+            await callback.message.edit_text(
+                f"Запись - {appointment.start_at_str} - уже была отменена ранее",
+                reply_markup=menu)
     else:
-        await callback.message.edit_text(f"Не удалось найти данную запсь в базе данных. Попробуйте повторить позже.",
+        await callback.message.edit_text(f"Не удалось найти данную запись в базе данных. Попробуйте повторить позже.",
                                          reply_markup=menu)

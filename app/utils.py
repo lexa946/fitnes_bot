@@ -39,7 +39,7 @@ def schedule_pars(hours_str: str) -> list[int]:
         elif start > end:
             raise ValueError("Start time > end time,  it's wrong! ")
 
-        for i in range(start, end):
+        for i in range(start, end+1):
             hours.append(i)
     hours = sorted(list(set(hours)))
     return hours
@@ -60,7 +60,7 @@ def get_free_hours(appointment_date: str | datetime.date,
         start_time = 8
 
     if trainer_work_hours and trainer_work_hours != [0]:
-        hours = list(filter(lambda i: i > start_time, trainer_work_hours))
+        hours = list(filter(lambda i: i >= start_time, trainer_work_hours))
     else:
         hours = list(range(start_time, 22))
 

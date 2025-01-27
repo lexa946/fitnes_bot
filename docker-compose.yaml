@@ -1,0 +1,7 @@
+services:
+  fitnes_bot:
+    image: fitnes_bot:latest
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile

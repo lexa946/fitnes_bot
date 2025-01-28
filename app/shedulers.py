@@ -1,4 +1,5 @@
 import logging
+from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -27,6 +28,6 @@ async def check_confirmation():
         await AppointmentDAO.patch(appointment, is_active=False)
 
 
-scheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler(timezone=ZoneInfo("Europe/Moscow"))
 scheduler.add_job(check_active_appointments, CronTrigger.from_crontab("0 8-22 * * *"))
 scheduler.add_job(check_confirmation, CronTrigger.from_crontab("0 8-22 * * *"))

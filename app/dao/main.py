@@ -34,7 +34,7 @@ class AppointmentDAO(BaseDAO):
         async with async_session() as session:
             stmt = (
                 select(Appointment)
-                .where(Appointment.start_at < datetime.datetime.now(ZoneInfo("Europe/Moscow")))
+                .where(Appointment.start_at < datetime.datetime.now(ZoneInfo("Europe/Moscow")).replace(tzinfo=None))
                 .where(Appointment.is_active == True)
             )
             result = await session.scalars(stmt)
@@ -43,7 +43,7 @@ class AppointmentDAO(BaseDAO):
     @classmethod
     async def get_check_confirmation(cls):
         async with async_session() as session:
-            dttm_now = datetime.datetime.now(ZoneInfo("Europe/Moscow"))
+            dttm_now = datetime.datetime.now(ZoneInfo("Europe/Moscow")).replace(tzinfo=None)
             stmt = (
                 select(Appointment)
                 .where(func.extract('epoch', Appointment.start_at - dttm_now) / 3600 <= 2.5)

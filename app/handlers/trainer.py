@@ -177,6 +177,10 @@ async def trainer_confirm_appointment(callback: CallbackQuery):
     appointment_id = int(callback.data.split(":")[1])
     appointment = await AppointmentDAO.find_one_or_none(id=appointment_id)
 
+    if not appointment.is_active:
+        await callback.message.edit_text("Запись уже была отменена 🤷‍♂️")
+        return
+
     if callback.data.startswith("trainer_confirm_appointment"):
         await AppointmentDAO.patch(appointment, is_confirmation=True)
         message_text = f"✅ Тренер подтвердил тренировку {appointment.start_at_str}"

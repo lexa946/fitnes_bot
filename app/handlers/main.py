@@ -172,8 +172,9 @@ async def my_appointments(callback: CallbackQuery, user: User):
             else:
                 username = trainer.username
 
-            message_text += (f"{i + 1}. {appointment.start_at_str} {username} "
-                             f"{'Подтверждено ✅' if appointment.is_confirmation else 'Ожидание ⏳'}\n")
+            message_text += f"{i + 1}. {appointment.start_at_str} {username} "
+            message_text += f"|💬 {appointment.comment} |" if appointment.comment else ""
+            message_text += f"{'Подтверждено ✅' if appointment.is_confirmation else 'Ожидание ⏳'}\n"
         await callback.message.edit_text(message_text, reply_markup=my_appointments_keyboard())
     else:
         message_text = "У вас нету записей."
@@ -222,7 +223,7 @@ async def remove_appointment(callback: CallbackQuery, user: User):
             client: User = user
             trainer: User = await UserDAO.find_one_or_none(user_id=appointment.trainer_id)
             edit_username = trainer.username
-            notification_chat_id = trainer.trainer_id
+            notification_chat_id = trainer.user_id
             notification_text = f"Клиент {client.username} отменил запись - {appointment.start_at_str}"
 
         if appointment.is_active:

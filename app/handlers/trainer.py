@@ -246,9 +246,9 @@ async def set_training(callback: CallbackQuery, state: FSMContext):
     client_messages_id = callback.data.split(":")[1]
     client_id, messages_id = client_messages_id.split(";")
     client_id = int(client_id)
-    messages_id = [int(message_id) for message_id in messages_id.split(",")]
     if messages_id:
-        await callback.bot.delete_messages(client_id, messages_id)
+        messages_id = [int(message_id) for message_id in messages_id.split(",")]
+        await callback.bot.delete_messages(callback.from_user.id, messages_id)
 
     client = await UserDAO.find_one_or_none(user_id=client_id)
 

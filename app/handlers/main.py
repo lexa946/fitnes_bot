@@ -1,5 +1,3 @@
-import logging
-
 from aiogram.filters import CommandStart, Command
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
@@ -92,7 +90,7 @@ async def main_menu(callback: CallbackQuery | Message, user: User, state: FSMCon
 @router.callback_query(F.data == "settings")
 @get_user
 async def settings_handler(callback: CallbackQuery, user: User):
-    message_text = (f"🪪 Профиль\n\t"
+    profile_text = (f"🪪 Профиль\n\t"
                     f"{'🧑' if user.gender.value == 'Мужской' else '👩'} ФИО: {user.username}\n\t")
     if user.is_trainer:
         schedule_work = await ScheduleWorkDAO.find_one_or_none(trainer_id=user.user_id)
@@ -114,18 +112,17 @@ async def settings_handler(callback: CallbackQuery, user: User):
         else:
             user_per_hour = "любое"
 
-        message_text += (f"🕑 Часы работы: {work_hours_str}\n\t"
+        profile_text += (f"🕑 Часы работы: {work_hours_str}\n\t"
                          f"🏃‍♂️ Кол-во клиентов в час: {user_per_hour}\n\t"
                          f"🔄 Автоподтверждение: {'Вкл' if schedule_work.auto_confirmation else 'Выкл'}\n\t"
                          f"🆓️ Выходные: {free_days_str}\n\t")
     else:
         trainer = await UserDAO.find_one_or_none(user_id=user.trainer_id)
         if trainer:
-            message_text += f"🏋️‍♂️ Тренер: {trainer.username}\n\t"
+            profile_text += f"🏋️‍♂️ Тренер: {trainer.username}\n\t"
         else:
-            message_text += f"🏋️‍♂️ Тренер: не выбран\n\t"
-
-    await callback.message.edit_text(message_text, reply_markup=settings_keyboard(user.is_trainer))
+            profile_text += f"🏋️‍♂️ Тренер: не выбран\n\t"
+    await callback.message.edit_text(profile_text, reply_markup=settings_keyboard(user.is_trainer))
 
 
 @router.callback_query(F.data == "change_FIO")

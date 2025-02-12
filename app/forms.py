@@ -13,6 +13,8 @@ class ChangeFIOForm(StatesGroup):
 class RegisterAppointment(StatesGroup):
     comment = State()
 
+class ClientComment(StatesGroup):
+    comment = State()
 
 class ChangeSchedule(StatesGroup):
     hours = State()
@@ -20,3 +22,7 @@ class ChangeSchedule(StatesGroup):
 
 class ChangeFreeDays(StatesGroup):
     days = State()
+
+
+class Training(StatesGroup):
+    program = State()

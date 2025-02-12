@@ -1,7 +1,8 @@
 import enum
 from datetime import datetime
+from typing import Optional
 
-from sqlalchemy import ForeignKey, text, Enum, ARRAY, Column, Integer, BigInteger
+from sqlalchemy import ForeignKey, text, Enum, ARRAY, Column, Integer, BigInteger, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BASE
@@ -21,6 +22,8 @@ class User(BASE):
     is_trainer: Mapped[bool] = mapped_column(default=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(server_default=text("NOW()"))
+    comment: Mapped[Optional[str]]
+
 
     trainer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id"), nullable=True)
     trainer: Mapped["User"] = relationship(remote_side=user_id)
@@ -58,3 +61,13 @@ class ScheduleWork(BASE):
 
     trainer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id"))
     trainer: Mapped["User"] = relationship(back_populates="schedule_work")
+
+class TrainingProgram(BASE):
+
+    __tablename__ = "training_programs"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id"), primary_key=True)
+
+    individual: Mapped[list[str]] = Column(ARRAY(String), default=[])
+    male: Mapped[list[str]] = Column(ARRAY(String), default=[])
+    female: Mapped[list[str]] = Column(ARRAY(String), default=[])

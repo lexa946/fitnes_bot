@@ -2,12 +2,14 @@ from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from app.dao.main import AppointmentDAO, UserDAO, ScheduleWorkDAO
-from app.forms import ChangeSchedule, ChangeFreeDays
-from app.keyboards.main import back_to_main_menu, client_list_keyboard, choice_remove_client_keyboard, \
-    delete_client_confirmation_keyboard, change_schedule_keyboard, change_max_user_per_hour_keyboard
+from app.dao.main import AppointmentDAO, UserDAO, ScheduleWorkDAO, TrainingProgramDAO
+from app.forms import ChangeSchedule, ChangeFreeDays, Training, ClientComment
+from app.keyboards.main import back_to_main_menu, client_list_keyboard, \
+    delete_client_confirmation_keyboard, change_schedule_keyboard, change_max_user_per_hour_keyboard, \
+    training_client_keyboard, end_set_training_keyboard, \
+    client_profile_keyboard, back_to_profile_client_keyboard
 from app.models import User
-from app.utils import get_user, schedule_pars
+from app.utils import get_user, schedule_pars, get_client_profile
 from app.config import settings
 
 router = Router()
@@ -119,7 +121,7 @@ async def change_auto_confirmation(callback: CallbackQuery, user: User):
     await callback.message.edit_text(message_text, reply_markup=back_to_main_menu())
 
 
-@router.callback_query(F.data == "client_list")
+@router.callback_query(F.data == "clients_list")
 @get_user
 async def client_list(callback: CallbackQuery, user: User):
     clients = await UserDAO.find_all(trainer_id=user.user_id)
@@ -128,21 +130,38 @@ async def client_list(callback: CallbackQuery, user: User):
         return
 
     message_text = "Список ваших клиентов:\n"
-    for i, client in enumerate(clients):
-        message_text += f"\t{i + 1}. {client.username}\n"
-
-    await callback.message.edit_text(message_text, reply_markup=client_list_keyboard())
+    await callback.message.edit_text(message_text, reply_markup=client_list_keyboard(clients))
 
 
-@router.callback_query(F.data == "remove_client")
-@get_user
-async def choice_remove_client(callback: CallbackQuery, user: User):
-    clients = await UserDAO.find_all(trainer_id=user.user_id)
-    if not clients:
-        await callback.message.edit_text(f"У вас нету клиентов!", reply_markup=back_to_main_menu())
+@router.callback_query(F.data.startswith("client_profile"))
+async def client_profile(callback: CallbackQuery):
+    client_id = int(callback.data.split(":")[1])
+    client = await UserDAO.find_one_or_none(user_id=client_id)
+    if not client:
+        await callback.message.edit_text(f"Нет такого клиента!", reply_markup=back_to_main_menu())
         return
-    await callback.message.edit_text("Выберите клиента для удаления:",
-                                     reply_markup=choice_remove_client_keyboard(clients))
+    profile_text = get_client_profile(client)
+    await callback.message.edit_text(profile_text, reply_markup=client_profile_keyboard(client_id))
+
+
+@router.callback_query(F.data.startswith("change_comment_client"))
+async def client_add_comment(callback: CallbackQuery, state: FSMContext):
+    client_id = int(callback.data.split(":")[1])
+    await state.set_state(ClientComment.comment)
+    await state.update_data(client_id=client_id)
+    await callback.message.edit_text("Пришлите комментарий:")
+
+
+@router.message(ClientComment.comment)
+async def client_set_comment(message: Message, state: FSMContext):
+    form = await state.get_data()
+    client = await UserDAO.find_one_or_none(user_id=form['client_id'])
+    client = await UserDAO.patch(client, comment=message.text)
+    profile_text = get_client_profile(client)
+    await message.answer("Комментарий добавлен!")
+    await message.answer(profile_text, reply_markup=client_profile_keyboard(form['client_id']))
+    await state.clear()
+
 
 
 @router.callback_query(F.data.startswith("remove_client"))
@@ -189,3 +208,77 @@ async def trainer_confirm_appointment(callback: CallbackQuery):
         message_text = f"❌ Тренер не подтвердил тренировку {appointment.start_at_str}"
     await callback.bot.send_message(appointment.user_id, message_text)
     await callback.message.delete()
+
+
+@router.callback_query(F.data.startswith("program_training_client"))
+async def program_training_client(callback: CallbackQuery):
+    client_id = int(callback.data.split(":")[1])
+
+    program = await TrainingProgramDAO.find_one_or_none(user_id=client_id)
+
+    if not program:
+        program = await TrainingProgramDAO.add(user_id=client_id)
+    if not program.individual:
+        await callback.message.edit_text(f"Программа еще не написана",
+                                         reply_markup=training_client_keyboard(client_id, []))
+        return
+    messages = []
+    for text in program.individual:
+        new_message = await callback.message.answer(text)
+        messages.append(new_message)
+
+    await messages[-1].edit_text(messages[-1].text, reply_markup=training_client_keyboard(
+        client_id,
+        [str(message.message_id) for message in messages]
+    ))
+
+@router.callback_query(F.data.startswith("close_program"))
+async def close_program(callback: CallbackQuery):
+    message_ids = callback.data.split(":")[1].split(",")
+    message_ids = [int(message_id) for message_id in message_ids]
+    await callback.bot.delete_messages(callback.from_user.id, message_ids)
+
+
+@router.callback_query(F.data.startswith("set_training"))
+async def set_training(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(Training.program)
+
+    client_messages_id = callback.data.split(":")[1]
+    client_id, messages_id = client_messages_id.split(";")
+    client_id = int(client_id)
+    messages_id = [int(message_id) for message_id in messages_id.split(",")]
+    if messages_id:
+        await callback.bot.delete_messages(client_id, messages_id)
+
+    client = await UserDAO.find_one_or_none(user_id=client_id)
+
+
+    # await callback.message.delete()
+
+    await callback.message.answer(f"Напишите программу тренировок для {client.username}.\n\n"
+                                     f"Правила оформления:\n"
+                                     f"1. Вы можете отправить несколько сообщений. "
+                                     f"Они будут приходить в такой же последовательности, как вы отправили.\n"
+                                     f"2. Пустые строки будут расцениваться как разделения сообщений. "
+                                     f"Если вы вставили пустую строку между абзацами, тогда вам придет несколько сообщений.\n"
+                                     f"3. Последним сообщением необходиом отправить \"🏁 Конец\". "
+                                     f"Сделать это можно с помощью клавиатуры.", reply_markup=end_set_training_keyboard())
+    await state.update_data(client_id=client_id)
+    await state.update_data(messages=[])
+
+@router.message(Training.program)
+async def set_training_message(message: Message, state: FSMContext):
+    form = await state.get_data()
+
+    if message.text != "🏁 Конец":
+
+        messages_text = message.text.split("\n\n")
+        for message_text in messages_text:
+            form['messages'].append(message_text.strip())
+        await state.update_data(messages=form['messages'])
+        return
+
+    program = await TrainingProgramDAO.find_one_or_none(user_id=form['client_id'])
+    await TrainingProgramDAO.patch(program, individual=form['messages'])
+    await message.answer("Программа обновлена!", reply_markup=back_to_profile_client_keyboard(form['client_id']))
+    await state.clear()

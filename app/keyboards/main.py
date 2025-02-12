@@ -2,6 +2,7 @@ import datetime
 from functools import wraps
 from zoneinfo import ZoneInfo
 
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.models import User, Appointment
@@ -56,7 +57,7 @@ def settings_keyboard(kb: InlineKeyboardBuilder, is_trainer: bool):
     kb.button(text="♻ Изменить ФИО", callback_data="change_FIO")
     if is_trainer:
         kb.button(text="📅 Изменить расписание", callback_data="change_schedule")
-        kb.button(text="💼 Список клиентов", callback_data="client_list")
+        kb.button(text="💼 Список клиентов", callback_data="clients_list")
     else:
         kb.button(text="🏋️‍♂️ Сменить тренера", callback_data="change_trainer")
     kb.button(text="⏪ Назад", callback_data="main_menu")
@@ -131,16 +132,18 @@ def choice_remove_appointments_keyboard(kb: InlineKeyboardBuilder, appointments:
 
 
 @create_inline_keyboard
-def client_list_keyboard(kb: InlineKeyboardBuilder):
-    kb.button(text="🗑 Удалить клиента", callback_data="remove_client")
-    kb.button(text="⏪ Назад", callback_data="main_menu")
-
+def client_list_keyboard(kb: InlineKeyboardBuilder, clients: list[User]):
+    for client in clients:
+        kb.button(text=client.username, callback_data=f"client_profile:{client.user_id}")
+    kb.button(text="⏪ Назад", callback_data="settings")
 
 @create_inline_keyboard
-def choice_remove_client_keyboard(kb: InlineKeyboardBuilder, clients: list[User]):
-    for client in clients:
-        kb.button(text=client.username, callback_data=f"remove_client:{client.user_id}")
-    kb.button(text="⏪ Назад", callback_data="main_menu")
+def client_profile_keyboard(kb: InlineKeyboardBuilder, client_id: str|int):
+    kb.button(text="📝 Изменить комментарий", callback_data=f"change_comment_client:{client_id}")
+    kb.button(text="🏋️‍♂️ Программа тренировок", callback_data=f"program_training_client:{client_id}")
+    kb.button(text="🗑️ Удалить", callback_data=f"remove_client:{client_id}")
+    kb.button(text="⏪ Назад", callback_data="clients_list")
+
 
 
 @create_inline_keyboard
@@ -153,3 +156,30 @@ def delete_client_confirmation_keyboard(kb: InlineKeyboardBuilder, client: User)
 def trainer_confirmation_appointment_keyboard(kb: InlineKeyboardBuilder, appointment_id: int):
     kb.button(text="✅ Подтвердить", callback_data=f"trainer_confirm_appointment:{appointment_id}")
     kb.button(text="❌ Отменить", callback_data=f"trainer_not_confirm_appointment:{appointment_id}")
+
+@create_inline_keyboard
+def choice_program_training_client_keyboard(kb: InlineKeyboardBuilder, clients: list[User]):
+    for client in clients:
+        kb.button(text=client.username, callback_data=f"training_client:{client.user_id}")
+    kb.button(text="⏪ Назад", callback_data="settings")
+
+@create_inline_keyboard
+def training_client_keyboard(kb: InlineKeyboardBuilder, client_id: int|str, message_ids: list[str]|None):
+    if message_ids:
+        kb.button(text="📝 Редактировать", callback_data=f"set_training:{client_id};{','.join(message_ids)}")
+        kb.button(text="❌ Закрыть", callback_data=f"close_program:{','.join(message_ids)}")
+    else:
+        kb.button(text="📝 Редактировать", callback_data=f"set_training:{client_id};")
+        kb.button(text="⏪ Назад", callback_data=f"client_profile:{client_id}")
+
+@create_inline_keyboard
+def back_to_profile_client_keyboard(kb: InlineKeyboardBuilder, client_id: int|str):
+    kb.button(text="⏪ Назад", callback_data=f"client_profile:{client_id}")
+
+
+
+def end_set_training_keyboard():
+    keyboard = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="🏁 Конец")]
+    ], resize_keyboard=True)
+    return keyboard

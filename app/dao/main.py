@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select, func
 
 from app.database import async_session
-from app.models import User, Appointment, ScheduleWork
+from app.models import User, Appointment, ScheduleWork, TrainingProgram
 from app.dao.base import BaseDAO
 
 
@@ -56,3 +56,7 @@ class AppointmentDAO(BaseDAO):
 
 class ScheduleWorkDAO(BaseDAO):
     model = ScheduleWork
+
+
+class TrainingProgramDAO(BaseDAO):
+    model = TrainingProgram

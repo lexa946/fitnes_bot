@@ -6,9 +6,7 @@ from zoneinfo import ZoneInfo
 from aiogram.types import CallbackQuery, Message
 
 from app.dao.main import UserDAO
-from app.models import Appointment
-
-
+from app.models import Appointment, User
 
 
 def get_user(func):
@@ -71,3 +69,11 @@ def get_free_hours(appointment_date: str | datetime.date,
 
     free_hours = set(hours) - set(all_busy_hours)
     return free_hours
+
+
+def get_client_profile(client: User) -> str:
+    profile_text = (f"🪪 Профиль\n\t"
+                    f"{'🧑' if client.gender.value == 'Мужской' else '👩'} ФИО: {client.username}\n\t"
+                    f"💬 Комментарий: {client.comment or 'нет'}\n\t")
+    return profile_text
+

@@ -5,11 +5,12 @@ from aiogram.types import Message, CallbackQuery
 from aiogram import F
 
 from app.dao.main import UserDAO, AppointmentDAO, ScheduleWorkDAO
+from app.gpt import get_gpt_answer
 from app.utils import get_user
 from app.keyboards.main import gender_keyboard, registration_apply_keyboard, main_menu_client_keyboard, \
     settings_keyboard, change_FIO_confirmation_keyboard, choice_trainer_keyboard, my_appointments_keyboard, \
     back_to_main_menu, choice_remove_appointments_keyboard
-from app.forms import RegistrationForm, ChangeFIOForm
+from app.forms import RegistrationForm, ChangeFIOForm, Nutritionist
 from app.models import User, Appointment
 from app.config import settings
 
@@ -237,3 +238,19 @@ async def remove_appointment(callback: CallbackQuery, user: User):
     else:
         await callback.message.edit_text(f"Не удалось найти данную запись в базе данных. Попробуйте повторить позже.",
                                          reply_markup=menu)
+
+
+@router.callback_query(F.data == "nutritionist")
+async def start_gpt_nutritionist(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(Nutritionist.products)
+    await callback.message.edit_text("Я твой персональный диетолог. Я помогу тебе рассчитать КБЖУ.", reply_markup=back_to_main_menu())
+
+
+@router.message(Nutritionist.products)
+async def calculate_KBJU(message: Message, state: FSMContext):
+    user_text = message.text
+    message = await message.answer(f"Думаю ⏳")
+
+    message_text = await get_gpt_answer(user_text, "gpt-4o-mini")
+    message_text = f"Ответ диетолога:\n\n" + message_text
+    await message.edit_text(message_text, reply_markup=back_to_main_menu())

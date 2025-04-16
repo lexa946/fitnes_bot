@@ -38,6 +38,7 @@ def main_menu_client_keyboard(kb: InlineKeyboardBuilder, is_admin: bool, is_trai
         kb.button(text="👩🏻‍💻 Администрирование", callback_data="admins_menu")
 
     kb.button(text="📒 Мои записи", callback_data="my_appointments")
+    kb.button(text="🥦 Диетолог", callback_data="nutritionist")
 
     if is_trainer:
         kb.button(text="✉️ Отправить рассылку", callback_data="send_newsletter")

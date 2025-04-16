@@ -26,3 +26,6 @@ class ChangeFreeDays(StatesGroup):
 
 class Training(StatesGroup):
     program = State()
+
+class Nutritionist(StatesGroup):
+    products = State()
